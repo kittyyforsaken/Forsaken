@@ -1,0 +1,127 @@
+-- AutoSlash V1
+
+
+repeat task.wait() until game:IsLoaded()
+
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local Player = Players.LocalPlayer
+local Character = Player.Character or Player.CharacterAdded:Wait()
+local HRP = Character:WaitForChild("HumanoidRootPart")
+local PrimaryPart = Character.PrimaryPart or HRP
+
+Player.CharacterAdded:Connect(function(c)
+    Character = c
+    HRP = c:WaitForChild("HumanoidRootPart")
+    PrimaryPart = Character.PrimaryPart or HRP
+end)
+
+local killersfolder = Workspace:WaitForChild("Players"):WaitForChild("Killers")
+local killernames = {"Sixer","Slasher","Noli","JohnDoe","c00lkidd","1x1x1x1","Nosferatu"}
+
+local anims = {
+    ["97648548303678"]=true,
+    ["131696603025265"]=true,
+    ["121255898612475"]=true,
+    ["77448521277146"]=true,
+    ["110400453990786"]=true,
+    ["98031287364865"]=true,
+    ["116618003477002"]=true
+}
+
+local remote = ReplicatedStorage.Modules.Network.RemoteEvent
+
+local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
+local Window = Rayfield:CreateWindow({
+    Name = "Auto Slash | Shedletsky",
+    LoadingTitle = "toxic 1x4 got looped 3 min",
+    LoadingSubtitle = "By ItsKittyyyGD",
+    ShowText = "shedleski",
+    ConfigurationSaving = {Enabled=true,FileName="autoslash"},
+    KeySystem = false,
+    Theme = "Amethyst"
+})
+
+local autoslash = Window:CreateTab("autoslash","sword")
+autoslash:CreateParagraph({Title="helper guy yez",Content="5-6 distance for it"})
+
+local AutoSlash=false
+local SlashDist=6
+local AimKiller=false
+
+autoslash:CreateToggle({Name="Enable Auto Slash",CurrentValue=false,Callback=function(v) AutoSlash=v end})
+autoslash:CreateSlider({Name="Distance when slash",Range={1,40},Increment=1,CurrentValue=6,Callback=function(v) SlashDist=v end})
+autoslash:CreateToggle({Name="Aim Killer",CurrentValue=false,Callback=function(v) AimKiller=v end})
+
+local cooldown = 0
+local slashtext = nil
+local localplayer = Player
+
+local function refreshslash()
+    local pg = localplayer:FindFirstChild("PlayerGui")
+    local mainui = pg and pg:FindFirstChild("MainUI")
+    local container = mainui and mainui:FindFirstChild("AbilityContainer")
+    local slash = container and container:FindFirstChild("Slash")
+    slashtext = slash and slash:FindFirstChild("CooldownTime") or nil
+end
+
+local function updatecooldown()
+    refreshslash()
+    cooldown = (slashtext and tonumber(slashtext.Text)) or 0
+end
+
+local function hasAnim(hum)
+    local animator = hum and hum:FindFirstChildOfClass("Animator")
+    if not animator then return false end
+    for _,t in pairs(animator:GetPlayingAnimationTracks()) do
+        local id = t.Animation.AnimationId:gsub("rbxassetid://","")
+        if anims[id] then
+            return true
+        end
+    end
+    return false
+end
+
+local function aimAt(targetPos)
+    local direction = (targetPos - HRP.Position).Unit
+    PrimaryPart.CFrame = CFrame.new(PrimaryPart.Position, PrimaryPart.Position + direction)
+end
+
+RunService.Heartbeat:Connect(function()
+    updatecooldown()
+    if not AutoSlash then return end
+    for _,k in pairs(killersfolder:GetChildren()) do
+        if table.find(killernames,k.Name) then
+            local khrp = k:FindFirstChild("HumanoidRootPart")
+            local hum = k:FindFirstChildOfClass("Humanoid")
+            if khrp and hum then
+                local dist = (khrp.Position - HRP.Position).Magnitude
+                if dist <= SlashDist and cooldown <= 0 then
+                    if AimKiller then
+                        aimAt(khrp.Position)
+                    end
+                    remote:FireServer("UseActorAbility",{buffer.fromstring("\"Slash\"")})
+                end
+            end
+        end
+    end
+    local npcs = workspace:FindFirstChild("Map") and workspace.Map:FindFirstChild("Lobby") and workspace.Map.Lobby:FindFirstChild("NPCs")
+    if npcs then
+        for _,n in pairs(npcs:GetChildren()) do
+            local hrp = n:FindFirstChild("HumanoidRootPart")
+            local hum = n:FindFirstChildOfClass("Humanoid")
+            if hrp and hum then
+                local dist = (hrp.Position - HRP.Position).Magnitude
+                if dist <= SlashDist and cooldown <= 0 then
+                    if AimKiller then
+                        aimAt(hrp.Position)
+                    end
+                    remote:FireServer("UseActorAbility",{buffer.fromstring("\"Slash\"")})
+                end
+            end
+        end
+    end
+end)
