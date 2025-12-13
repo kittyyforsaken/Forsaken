@@ -1,0 +1,129 @@
+-- Auto Fried Chicken V1 
+
+
+
+local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
+
+local Window = Rayfield:CreateWindow({
+    Name = "Auto Fried Chicken",
+    LoadingTitle = "BBQ CHICKEN ALERT",
+    LoadingSubtitle = "By ItsKittyyyGD",
+    ShowText = "❤️ chiken",
+    ConfigurationSaving = { Enabled = false },
+    Discord = { Enabled = false },
+    KeySystem = false
+})
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+local LocalPlayer = Players.LocalPlayer
+local Remote = ReplicatedStorage.Modules.Network.RemoteEvent
+
+local HealValue = 50
+local DistanceHealValue = 50
+local AutoHeal = false
+local IgnoreDistance = false
+local IgnoreCharges = false
+
+local killersfolder = Workspace:WaitForChild("Players"):WaitForChild("Killers")
+local killernames = {"Sixer","Slasher","Noli","JohnDoe","c00lkidd","1x1x1x1","Nosferatu"}
+
+local Tab = Window:CreateTab("Auto heal", 4483362458)
+
+Tab:CreateInput({
+    Name = "Heal HP",
+    PlaceholderText = "Example: 30",
+    RemoveTextAfterFocusLost = false,
+    Callback = function(Value)
+        local num = tonumber(Value:match("(%d+)"))
+        if num then
+            HealValue = math.clamp(num, 1, 99)
+        end
+    end
+})
+
+Tab:CreateToggle({
+    Name = "Auto Heal",
+    CurrentValue = false,
+    Callback = function(Value)
+        AutoHeal = Value
+    end
+})
+
+local Tab2 = Window:CreateTab("Distance when heal", 4483362458)
+
+Tab2:CreateToggle({
+    Name = "Ignore Distance",
+    CurrentValue = false,
+    Callback = function(Value)
+        IgnoreDistance = Value
+    end
+})
+
+Tab2:CreateInput({
+    Name = "Distance Heal HP",
+    PlaceholderText = "Example: 30",
+    RemoveTextAfterFocusLost = false,
+    Callback = function(Value)
+        local num = tonumber(Value:match("(%d+)"))
+        if num then
+            DistanceHealValue = math.clamp(num, 1, 99)
+        end
+    end
+})
+
+local Tab3 = Window:CreateTab("Charges", 4483362458)
+
+Tab3:CreateToggle({
+    Name = "Ignore charges and eat it",
+    CurrentValue = false,
+    Callback = function(Value)
+        IgnoreCharges = Value
+    end
+})
+
+task.spawn(function()
+    while task.wait(0.5) do
+        if AutoHeal then
+            pcall(function()
+                local HealthText = LocalPlayer.PlayerGui.TemporaryUI.PlayerInfo.Bars.Health.Amount.Text
+                local CurrentHP = tonumber(HealthText:match("(%d+)/100"))
+                if not CurrentHP then return end
+
+                local ChargesText = LocalPlayer.PlayerGui.MainUI.AbilityContainer.FriedChicken.Charges.Text
+                local Charges = tonumber(ChargesText)
+
+                if not IgnoreCharges and Charges and Charges <= 1 then
+                    return
+                end
+
+                local ShouldHeal = false
+
+                if IgnoreDistance then
+                    ShouldHeal = CurrentHP <= DistanceHealValue
+                else
+                    ShouldHeal = CurrentHP <= HealValue
+                    for _, killerName in ipairs(killernames) do
+                        local killer = killersfolder:FindFirstChild(killerName)
+                        if killer
+                        and killer.PrimaryPart
+                        and LocalPlayer.Character
+                        and LocalPlayer.Character.PrimaryPart
+                        and (killer.PrimaryPart.Position - LocalPlayer.Character.PrimaryPart.Position).Magnitude <= 20 then
+                            ShouldHeal = false
+                            break
+                        end
+                    end
+                end
+
+                if ShouldHeal then
+                    Remote:FireServer(
+                        "UseActorAbility",
+                        { buffer.fromstring("\"FriedChicken\"") }
+                    )
+                end
+            end)
+        end
+    end
+end)
